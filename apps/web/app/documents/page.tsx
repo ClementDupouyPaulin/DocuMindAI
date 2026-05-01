@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import {
   deleteDocument,
@@ -37,6 +37,8 @@ export default function DocumentsPage() {
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
   async function refreshDocuments() {
     const docs = await listDocuments();
     setDocuments(docs);
@@ -51,24 +53,33 @@ export default function DocumentsPage() {
   async function handleUpload(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
+    const form = event.currentTarget;
+
     if (!file) {
-      setError("Choisis un fichier PDF ou TXT.");
-      return;
+        setError("Choisis un fichier PDF, TXT ou DOCX.");
+        return;
     }
 
     setError(null);
     setLoading(true);
 
     try {
-      await uploadDocument(file, title || undefined);
-      setTitle("");
-      setFile(null);
-      event.currentTarget.reset();
-      await refreshDocuments();
+        await uploadDocument(file, title || undefined);
+
+        setTitle("");
+        setFile(null);
+
+        form.reset();
+
+        if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+        }
+
+        await refreshDocuments();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur upload.");
+        setError(err instanceof Error ? err.message : "Erreur upload.");
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
   }
 
@@ -128,13 +139,29 @@ export default function DocumentsPage() {
             </label>
 
             <label className="block">
-              <span className="text-sm text-slate-300">Fichier PDF/TXT</span>
-              <input
-                className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm"
-                type="file"
-                accept=".pdf,.txt"
-                onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-              />
+                <span className="text-sm text-slate-300">Fichier PDF/TXT/DOCX</span>
+
+                <div className="mt-1 flex items-center gap-2">
+                    <input
+                    ref={fileInputRef}
+                    id="document-file"
+                    className="hidden"
+                    type="file"
+                    accept=".pdf,.txt,.docx"
+                    onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+                    />
+
+                    <label
+                    htmlFor="document-file"
+                    className="shrink-0 cursor-pointer rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 hover:bg-slate-800"
+                    >
+                    Choisir un fichier
+                    </label>
+
+                    <span className="min-w-0 flex-1 truncate rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-400">
+                    {file ? file.name : "Aucun fichier choisi"}
+                    </span>
+                </div>
             </label>
 
             <button
