@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.models.user import User
+from app.schemas.chunk import DocumentChunkRead
 from app.schemas.document import DocumentRead
 from app.services.document_service import (
     create_document_from_upload,
@@ -13,6 +14,7 @@ from app.services.document_service import (
     get_document_for_user,
     list_documents_for_user,
 )
+from app.services.indexing_service import index_document, list_chunks_for_document
 
 router = APIRouter()
 
@@ -51,6 +53,32 @@ def get_document(
     db: Session = Depends(get_db),
 ) -> DocumentRead:
     return get_document_for_user(
+        db=db,
+        document_id=document_id,
+        current_user=current_user,
+    )
+
+
+@router.post("/{document_id}/index", response_model=DocumentRead)
+def index_uploaded_document(
+    document_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> DocumentRead:
+    return index_document(
+        db=db,
+        document_id=document_id,
+        current_user=current_user,
+    )
+
+
+@router.get("/{document_id}/chunks", response_model=list[DocumentChunkRead])
+def get_document_chunks(
+    document_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[DocumentChunkRead]:
+    return list_chunks_for_document(
         db=db,
         document_id=document_id,
         current_user=current_user,
