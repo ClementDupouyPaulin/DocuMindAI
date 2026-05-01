@@ -1,5 +1,13 @@
+# Env
 .env
 .env.local
 .env.*.local
 apps/api/.env
 apps/web/.env
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.venv/
