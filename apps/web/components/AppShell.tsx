@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { clearAccessToken } from "@/lib/auth";
+import { useEffect, useState } from "react";
+import { clearAccessToken, getAccessToken } from "@/lib/auth";
 
 type AppShellProps = {
   children: React.ReactNode;
@@ -10,10 +11,30 @@ type AppShellProps = {
 
 export function AppShell({ children }: AppShellProps) {
   const router = useRouter();
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+
+  useEffect(() => {
+    const token = getAccessToken();
+
+    if (!token) {
+      router.replace("/login");
+      return;
+    }
+
+    setIsCheckingAuth(false);
+  }, [router]);
 
   function logout() {
     clearAccessToken();
     router.push("/login");
+  }
+
+  if (isCheckingAuth) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-100">
+        Chargement...
+      </div>
+    );
   }
 
   return (

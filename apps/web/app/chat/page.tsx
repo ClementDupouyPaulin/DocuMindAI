@@ -1,8 +1,8 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { AppShell } from "@/components/AppShell";
-import { listConversations, queryChat } from "@/lib/api";
+import { getConversation, listConversations, queryChat } from "@/lib/api";
 import type { ChatResponse, Conversation, Source } from "@/types/api";
 
 type ChatMessage = {
@@ -17,7 +17,10 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingConversationId, setLoadingConversationId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const bottomRef = useRef<HTMLDivElement | null>(null);
 
   async function refreshConversations() {
     const data = await listConversations();
@@ -29,6 +32,33 @@ export default function ChatPage() {
       setError(err instanceof Error ? err.message : "Erreur conversations.");
     });
   }, []);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, loading]);
+
+  async function loadConversation(id: string) {
+    setError(null);
+    setLoadingConversationId(id);
+
+    try {
+      const conversation = await getConversation(id);
+
+      setConversationId(conversation.id);
+
+      setMessages(
+        conversation.messages.map((message) => ({
+          role: message.role,
+          content: message.content,
+          sources: message.sources_json ?? undefined,
+        }))
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erreur chargement conversation.");
+    } finally {
+      setLoadingConversationId(null);
+    }
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -104,7 +134,7 @@ export default function ChatPage() {
             {conversations.map((conversation) => (
               <button
                 key={conversation.id}
-                onClick={() => setConversationId(conversation.id)}
+                onClick={() => loadConversation(conversation.id)}
                 className={`w-full rounded-lg border px-3 py-2 text-left text-sm hover:bg-slate-800 ${
                   conversationId === conversation.id
                     ? "border-blue-500 bg-blue-500/10 text-blue-200"
@@ -115,7 +145,9 @@ export default function ChatPage() {
                   {conversation.title}
                 </p>
                 <p className="mt-1 text-xs text-slate-500">
-                  {new Date(conversation.updated_at).toLocaleString("fr-FR")}
+                  {loadingConversationId === conversation.id
+                    ? "Chargement..."
+                    : new Date(conversation.updated_at).toLocaleString("fr-FR")}
                 </p>
               </button>
             ))}
@@ -156,7 +188,7 @@ export default function ChatPage() {
                 className={`rounded-2xl border p-4 ${
                   message.role === "user"
                     ? "ml-auto max-w-[80%] border-blue-500/30 bg-blue-500/10"
-                    : "mr-auto max-w-[90%] border-slate-700 bg-slate-950"
+                    : "mr-auto max-w-[95%] border-slate-700 bg-slate-950"
                 }`}
               >
                 <p className="text-xs uppercase tracking-wide text-slate-500">
@@ -204,6 +236,8 @@ export default function ChatPage() {
                 DocuMind AI réfléchit...
               </div>
             )}
+
+            <div ref={bottomRef} />
           </div>
 
           <form onSubmit={handleSubmit} className="border-t border-slate-800 p-5">

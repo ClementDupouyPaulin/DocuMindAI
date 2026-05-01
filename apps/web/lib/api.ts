@@ -1,13 +1,37 @@
-import { getAccessToken } from "./auth";
+import { clearAccessToken, getAccessToken } from "./auth";
 import type {
   AuthResponse,
   ChatResponse,
   Conversation,
+  ConversationDetail,
   DocumentItem,
   User,
 } from "@/types/api";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+
+function redirectToLoginIfBrowser() {
+  if (typeof window !== "undefined") {
+    clearAccessToken();
+    window.location.href = "/login";
+  }
+}
+
+function formatApiError(message: string): string {
+  if (
+    message.includes("insufficient_quota") ||
+    message.includes("exceeded your current quota") ||
+    message.includes("429")
+  ) {
+    return "Quota OpenAI insuffisant ou limite atteinte. Vérifie ton billing/API key.";
+  }
+
+  if (message.includes("OpenAI API key is not configured")) {
+    return "Clé OpenAI non configurée côté backend.";
+  }
+
+  return message;
+}
 
 async function request<T>(
   path: string,
@@ -24,6 +48,7 @@ async function request<T>(
     const token = getAccessToken();
 
     if (!token) {
+      redirectToLoginIfBrowser();
       throw new Error("Utilisateur non connecté.");
     }
 
@@ -35,6 +60,11 @@ async function request<T>(
     headers,
   });
 
+  if (response.status === 401) {
+    redirectToLoginIfBrowser();
+    throw new Error("Session expirée. Reconnecte-toi.");
+  }
+
   if (!response.ok) {
     let message = `Erreur API ${response.status}`;
 
@@ -45,7 +75,7 @@ async function request<T>(
       // Ignore non-JSON errors
     }
 
-    throw new Error(message);
+    throw new Error(formatApiError(String(message)));
   }
 
   if (response.status === 204) {
@@ -143,4 +173,14 @@ export function queryChat(payload: {
 
 export function listConversations(): Promise<Conversation[]> {
   return request<Conversation[]>("/conversations", {}, true);
+}
+
+export function getConversation(
+  conversationId: string
+): Promise<ConversationDetail> {
+  return request<ConversationDetail>(
+    `/conversations/${conversationId}`,
+    {},
+    true
+  );
 }
