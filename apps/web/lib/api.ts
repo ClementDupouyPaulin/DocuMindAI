@@ -156,6 +156,8 @@ export function queryChat(payload: {
   question: string;
   conversation_id?: string | null;
   top_k?: number;
+  document_ids?: string[] | null;
+  min_score?: number;
 }): Promise<ChatResponse> {
   return request<ChatResponse>(
     "/chat/query",
@@ -165,6 +167,8 @@ export function queryChat(payload: {
         question: payload.question,
         conversation_id: payload.conversation_id ?? null,
         top_k: payload.top_k ?? 5,
+        document_ids: payload.document_ids ?? null,
+        min_score: payload.min_score ?? 0,
       }),
     },
     true

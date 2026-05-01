@@ -15,6 +15,7 @@ settings = get_settings()
 ALLOWED_EXTENSIONS = {
     ".pdf": "PDF",
     ".txt": "TXT",
+    ".docx": "DOCX",
 }
 
 

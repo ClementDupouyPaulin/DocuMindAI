@@ -54,6 +54,8 @@ def answer_question(
         query_vector=query_vector,
         user_id=current_user.id,
         limit=payload.top_k,
+        document_ids=payload.document_ids,
+        min_score=payload.min_score,
     )
 
     sources = _build_sources(retrieved_chunks)
@@ -183,6 +185,7 @@ def _build_sources(retrieved_chunks: list[dict]) -> list[SourceRead]:
                 chunk_index=int(chunk.get("chunk_index") or 0),
                 score=float(chunk.get("score") or 0),
                 content_preview=preview,
+                content=content,
             )
         )
 

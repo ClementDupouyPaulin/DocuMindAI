@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from docx import Document as DocxDocument
 from fastapi import HTTPException, status
 from pypdf import PdfReader
 
@@ -18,6 +19,9 @@ def extract_text_from_file(storage_path: str, file_type: str) -> list[dict[str, 
 
     if file_type == "PDF":
         return extract_text_from_pdf(path)
+
+    if file_type == "DOCX":
+        return extract_text_from_docx(path)
 
     raise HTTPException(
         status_code=status.HTTP_400_BAD_REQUEST,
@@ -51,3 +55,29 @@ def extract_text_from_pdf(path: Path) -> list[dict[str, int | str | None]]:
         )
 
     return pages
+
+
+def extract_text_from_docx(path: Path) -> list[dict[str, int | str | None]]:
+    document = DocxDocument(str(path))
+
+    parts: list[str] = []
+
+    for paragraph in document.paragraphs:
+        text = paragraph.text.strip()
+
+        if text:
+            parts.append(text)
+
+    for table in document.tables:
+        for row in table.rows:
+            cells = [cell.text.strip() for cell in row.cells if cell.text.strip()]
+
+            if cells:
+                parts.append(" | ".join(cells))
+
+    return [
+        {
+            "page_number": None,
+            "text": "\n\n".join(parts),
+        }
+    ]

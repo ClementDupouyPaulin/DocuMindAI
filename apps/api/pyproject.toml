@@ -18,6 +18,7 @@ dependencies = [
     "python-jose[cryptography]",
     "email-validator",
     "pypdf",
+    "python-docx",
 ]
 
 [project.optional-dependencies]
