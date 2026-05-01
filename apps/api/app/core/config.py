@@ -56,8 +56,4 @@ def get_settings() -> Settings:
 def get_cors_origins() -> list[str]:
     settings = get_settings()
 
-    return [
-        origin.strip()
-        for origin in settings.cors_origins.split(",")
-        if origin.strip()
-    ]
+    return [origin.strip() for origin in settings.cors_origins.split(",") if origin.strip()]

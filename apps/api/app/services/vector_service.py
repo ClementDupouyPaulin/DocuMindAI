@@ -79,8 +79,10 @@ class VectorService:
                 )
             ),
         )
-        
-    def search_similar_chunks(self, query_vector: list[float], user_id: uuid.UUID, limit: int = 5) -> list[dict]:
+
+    def search_similar_chunks(
+        self, query_vector: list[float], user_id: uuid.UUID, limit: int = 5
+    ) -> list[dict]:
         self.ensure_collection_exists()
 
         result = self.client.query_points(

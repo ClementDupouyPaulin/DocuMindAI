@@ -69,9 +69,7 @@ def index_document(
 
         db.flush()
 
-        embeddings = embedding_service.embed_texts(
-            [chunk.content for chunk in chunks]
-        )
+        embeddings = embedding_service.embed_texts([chunk.content for chunk in chunks])
 
         for chunk, vector in zip(chunks, embeddings, strict=True):
             point_id = vector_service.upsert_chunk_vector(
