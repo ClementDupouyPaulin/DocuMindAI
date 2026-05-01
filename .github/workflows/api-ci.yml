@@ -1,0 +1,65 @@
+name: API CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  test-api:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: apps/api
+
+    env:
+      APP_NAME: DocuMind AI
+      ENVIRONMENT: test
+
+      DATABASE_URL: postgresql+psycopg://documind:documind@localhost:5432/documind
+
+      QDRANT_URL: http://localhost:6333
+      QDRANT_API_KEY: ""
+      QDRANT_COLLECTION_NAME: documind_chunks
+
+      JWT_SECRET_KEY: test-secret-key
+      JWT_ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: 60
+
+      OPENAI_API_KEY:
+      LLM_PROVIDER: openai
+      LLM_MODEL: gpt-4.1-mini
+
+      EMBEDDING_PROVIDER: openai
+      EMBEDDING_MODEL: text-embedding-3-small
+      EMBEDDING_DIMENSION: 1536
+
+      UPLOAD_DIR: /tmp/documind/uploads
+      MAX_UPLOAD_SIZE_MB: 25
+
+      CORS_ORIGINS: http://localhost:3000
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Run Ruff
+        run: ruff check app
+
+      - name: Run Black check
+        run: black --check app
+
+      - name: Run tests
+        run: pytest
