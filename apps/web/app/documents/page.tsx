@@ -50,6 +50,31 @@ export default function DocumentsPage() {
     });
   }, []);
 
+  function delay(ms: number): Promise<void> {
+    return new Promise((resolve) => {
+        window.setTimeout(resolve, ms);
+    });
+  }
+
+  async function pollDocumentIndexing(documentId: string) {
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+        await delay(1500);
+
+        const docs = await listDocuments();
+        setDocuments(docs);
+
+        const targetDocument = docs.find((document) => document.id === documentId);
+
+        if (!targetDocument) {
+        return;
+        }
+
+        if (targetDocument.status !== "PROCESSING") {
+        return;
+        }
+    }
+  }
+
   async function handleUpload(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -88,13 +113,14 @@ export default function DocumentsPage() {
     setActionLoadingId(documentId);
 
     try {
-      await indexDocument(documentId);
-      await refreshDocuments();
+        await indexDocument(documentId);
+        await refreshDocuments();
+        await pollDocumentIndexing(documentId);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur indexation.");
-      await refreshDocuments();
+        setError(err instanceof Error ? err.message : "Erreur indexation.");
+        await refreshDocuments();
     } finally {
-      setActionLoadingId(null);
+        setActionLoadingId(null);
     }
   }
 
@@ -232,13 +258,17 @@ export default function DocumentsPage() {
 
                   <div className="flex gap-2">
                     <button
-                      onClick={() => handleIndex(document.id)}
-                      disabled={actionLoadingId === document.id}
-                      className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-60"
+                        onClick={() => handleIndex(document.id)}
+                        disabled={
+                            actionLoadingId === document.id || document.status === "PROCESSING"
+                        }
+                        className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-60"
                     >
-                      {actionLoadingId === document.id
-                        ? "Action..."
-                        : "Indexer"}
+                        {document.status === "PROCESSING"
+                            ? "Indexation..."
+                            : actionLoadingId === document.id
+                            ? "Action..."
+                            : "Indexer"}
                     </button>
 
                     <button

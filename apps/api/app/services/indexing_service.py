@@ -1,9 +1,11 @@
+import logging
 import uuid
 
-from fastapi import HTTPException, status
+from fastapi import BackgroundTasks, HTTPException, status
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
+from app.db.session import SessionLocal
 from app.models.chunk import DocumentChunk
 from app.models.document import Document
 from app.models.user import User
@@ -13,11 +15,13 @@ from app.services.embedding_service import embedding_service
 from app.services.extraction_service import extract_text_from_file
 from app.services.vector_service import vector_service
 
+logger = logging.getLogger(__name__)
 
 def index_document(
     db: Session,
     document_id: uuid.UUID,
     current_user: User,
+    allow_processing_status: bool = False,
 ) -> Document:
     document = get_document_for_user(
         db=db,
@@ -25,7 +29,7 @@ def index_document(
         current_user=current_user,
     )
 
-    if document.status == "PROCESSING":
+    if document.status == "PROCESSING" and not allow_processing_status:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Document is already being processed.",
@@ -114,3 +118,68 @@ def list_chunks_for_document(
     )
 
     return list(db.execute(statement).scalars().all())
+
+def enqueue_document_indexing(
+    db: Session,
+    document_id: uuid.UUID,
+    current_user: User,
+    background_tasks: BackgroundTasks,
+) -> Document:
+    statement = select(Document).where(
+        Document.id == document_id,
+        Document.user_id == current_user.id,
+    )
+
+    document = db.execute(statement).scalar_one_or_none()
+
+    if document is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found.",
+        )
+
+    document.status = "PROCESSING"
+    document.error_message = None
+
+    db.commit()
+    db.refresh(document)
+
+    background_tasks.add_task(
+        index_document_in_background,
+        str(document.id),
+        str(current_user.id),
+    )
+
+    return document
+
+
+def index_document_in_background(document_id: str, user_id: str) -> None:
+    db = SessionLocal()
+
+    try:
+        user = db.get(User, uuid.UUID(user_id))
+
+        if user is None:
+            return
+
+        index_document(
+            db=db,
+            document_id=uuid.UUID(document_id),
+            current_user=user,
+            allow_processing_status=True,
+        )
+
+    except Exception as exc:
+        logger.exception("Document indexing failed in background task")
+
+        db.rollback()
+
+        document = db.get(Document, uuid.UUID(document_id))
+
+        if document is not None:
+            document.status = "FAILED"
+            document.error_message = str(exc)[:2000]
+            db.commit()
+
+    finally:
+        db.close()

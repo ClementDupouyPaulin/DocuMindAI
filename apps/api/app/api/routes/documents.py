@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, File, Form, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, UploadFile, status, BackgroundTasks
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
@@ -14,7 +14,7 @@ from app.services.document_service import (
     get_document_for_user,
     list_documents_for_user,
 )
-from app.services.indexing_service import index_document, list_chunks_for_document
+from app.services.indexing_service import enqueue_document_indexing, list_chunks_for_document
 
 router = APIRouter()
 
@@ -59,16 +59,22 @@ def get_document(
     )
 
 
-@router.post("/{document_id}/index", response_model=DocumentRead)
+@router.post(
+    "/{document_id}/index",
+    response_model=DocumentRead,
+    status_code=status.HTTP_202_ACCEPTED,
+)
 def index_uploaded_document(
     document_id: uuid.UUID,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> DocumentRead:
-    return index_document(
+    return enqueue_document_indexing(
         db=db,
         document_id=document_id,
         current_user=current_user,
+        background_tasks=background_tasks,
     )
 
 
