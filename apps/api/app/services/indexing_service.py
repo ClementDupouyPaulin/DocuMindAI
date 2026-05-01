@@ -9,7 +9,9 @@ from app.models.document import Document
 from app.models.user import User
 from app.services.chunking_service import split_text_into_chunks
 from app.services.document_service import get_document_for_user
+from app.services.embedding_service import embedding_service
 from app.services.extraction_service import extract_text_from_file
+from app.services.vector_service import vector_service
 
 
 def index_document(
@@ -40,28 +42,44 @@ def index_document(
             file_type=document.file_type,
         )
 
-        chunks = split_text_into_chunks(pages)
+        chunks_data = split_text_into_chunks(pages)
 
-        if not chunks:
+        if not chunks_data:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="No text could be extracted from this document.",
             )
 
-        db.execute(
-            delete(DocumentChunk).where(DocumentChunk.document_id == document.id)
+        db.execute(delete(DocumentChunk).where(DocumentChunk.document_id == document.id))
+        vector_service.delete_document_vectors(document_id=document.id)
+
+        chunks: list[DocumentChunk] = []
+
+        for chunk_data in chunks_data:
+            chunk = DocumentChunk(
+                document_id=document.id,
+                chunk_index=int(chunk_data["chunk_index"]),
+                content=str(chunk_data["content"]),
+                token_count=int(chunk_data["token_count"]),
+                page_number=chunk_data["page_number"],
+            )
+
+            db.add(chunk)
+            chunks.append(chunk)
+
+        db.flush()
+
+        embeddings = embedding_service.embed_texts(
+            [chunk.content for chunk in chunks]
         )
 
-        for chunk in chunks:
-            db.add(
-                DocumentChunk(
-                    document_id=document.id,
-                    chunk_index=int(chunk["chunk_index"]),
-                    content=str(chunk["content"]),
-                    token_count=int(chunk["token_count"]),
-                    page_number=chunk["page_number"],
-                )
+        for chunk, vector in zip(chunks, embeddings, strict=True):
+            point_id = vector_service.upsert_chunk_vector(
+                chunk=chunk,
+                document=document,
+                vector=vector,
             )
+            chunk.qdrant_point_id = point_id
 
         document.status = "INDEXED"
         db.commit()

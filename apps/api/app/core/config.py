@@ -9,6 +9,7 @@ class Settings(BaseSettings):
 
     database_url: str
     qdrant_url: str
+    qdrant_collection_name: str = "documind_chunks"
 
     jwt_secret_key: str
     jwt_algorithm: str = "HS256"
@@ -16,8 +17,9 @@ class Settings(BaseSettings):
 
     openai_api_key: str | None = None
     llm_provider: str = "openai"
-    llm_model: str = "to-configure"
-    embedding_model: str = "to-configure"
+    llm_model: str = "gpt-4.1-mini"
+    embedding_model: str = "text-embedding-3-small"
+    embedding_dimension: int = 1536
 
     upload_dir: str = "/app/storage/uploads"
     max_upload_size_mb: int = 25

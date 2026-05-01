@@ -5,6 +5,7 @@ from fastapi import HTTPException, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.services.vector_service import vector_service
 from app.core.config import get_settings
 from app.models.document import Document
 from app.models.user import User
@@ -134,6 +135,8 @@ def delete_document_for_user(
 
     if storage_path.exists():
         storage_path.unlink()
+
+    vector_service.delete_document_vectors(document_id=document.id)
 
     db.delete(document)
     db.commit()
