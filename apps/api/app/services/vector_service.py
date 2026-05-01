@@ -79,6 +79,46 @@ class VectorService:
                 )
             ),
         )
+        
+    def search_similar_chunks(self, query_vector: list[float], user_id: uuid.UUID, limit: int = 5) -> list[dict]:
+        self.ensure_collection_exists()
+
+        result = self.client.query_points(
+            collection_name=self.collection_name,
+            query=query_vector,
+            query_filter=models.Filter(
+                must=[
+                    models.FieldCondition(
+                        key="user_id",
+                        match=models.MatchValue(value=str(user_id)),
+                    )
+                ]
+            ),
+            limit=limit,
+            with_payload=True,
+        )
+
+        points = getattr(result, "points", [])
+        results: list[dict] = []
+
+        for point in points:
+            payload = point.payload or {}
+
+            results.append(
+                {
+                    "score": float(point.score),
+                    "chunk_id": payload.get("chunk_id"),
+                    "document_id": payload.get("document_id"),
+                    "user_id": payload.get("user_id"),
+                    "filename": payload.get("filename"),
+                    "title": payload.get("title"),
+                    "chunk_index": payload.get("chunk_index"),
+                    "page_number": payload.get("page_number"),
+                    "content": payload.get("content"),
+                }
+            )
+
+        return results
 
 
 vector_service = VectorService()
