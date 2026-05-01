@@ -1,0 +1,33 @@
+[project]
+name = "documind-api"
+version = "0.1.0"
+description = "FastAPI backend for DocuMind AI"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "pydantic-settings",
+    "sqlalchemy",
+    "psycopg[binary]",
+    "alembic",
+    "python-multipart",
+    "qdrant-client",
+    "openai",
+    "passlib[bcrypt]",
+    "python-jose[cryptography]",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "httpx",
+    "ruff",
+    "black",
+]
+
+[tool.ruff]
+line-length = 100
+
+[tool.black]
+line-length = 100
