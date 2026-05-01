@@ -1,0 +1,8 @@
+- Frontend Next.js
+- Backend FastAPI
+- PostgreSQL pour les données relationnelles
+- Qdrant pour les vecteurs
+- OpenAI pour embeddings + réponses
+- Stockage local des fichiers
+- Découpage backend en routes / schemas / models / services / db / core
+- Filtrage Qdrant par user_id pour isoler les données utilisateur
