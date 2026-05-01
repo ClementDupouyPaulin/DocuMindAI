@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -9,6 +10,7 @@ class Settings(BaseSettings):
 
     database_url: str
     qdrant_url: str
+    qdrant_api_key: str | None = None
     qdrant_collection_name: str = "documind_chunks"
 
     jwt_secret_key: str
@@ -18,18 +20,44 @@ class Settings(BaseSettings):
     openai_api_key: str | None = None
     llm_provider: str = "openai"
     llm_model: str = "gpt-4.1-mini"
+    embedding_provider: str = "openai"
     embedding_model: str = "text-embedding-3-small"
     embedding_dimension: int = 1536
 
     upload_dir: str = "/app/storage/uploads"
     max_upload_size_mb: int = 25
 
+    cors_origins: str = "http://localhost:3000"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
     )
 
+    @field_validator("database_url", mode="before")
+    @classmethod
+    def normalize_database_url(cls, value: str) -> str:
+        url = str(value)
+
+        if url.startswith("postgres://"):
+            url = url.replace("postgres://", "postgresql://", 1)
+
+        if url.startswith("postgresql://"):
+            url = url.replace("postgresql://", "postgresql+psycopg://", 1)
+
+        return url
+
 
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
+
+
+def get_cors_origins() -> list[str]:
+    settings = get_settings()
+
+    return [
+        origin.strip()
+        for origin in settings.cors_origins.split(",")
+        if origin.strip()
+    ]

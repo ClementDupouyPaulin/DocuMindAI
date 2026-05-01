@@ -5,9 +5,10 @@
 apps/api/.env
 apps/web/.env
 
+# Uploaded files
+storage/uploads/*
+!storage/uploads/.gitkeep
+
 # Python
 __pycache__/
 *.pyc
-.pytest_cache/
-.ruff_cache/
-.venv/
