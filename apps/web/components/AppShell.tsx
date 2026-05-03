@@ -41,7 +41,7 @@ export function AppShell({ children }: AppShellProps) {
     <div className="min-h-screen bg-slate-950 text-slate-100">
       <header className="border-b border-slate-800 bg-slate-900/80">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <Link href="/dashboard" className="text-xl font-bold">
+          <Link href="/dashboard" className="hover:text-blue-300">
             DocuMind AI
           </Link>
 
