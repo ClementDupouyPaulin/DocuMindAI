@@ -233,3 +233,13 @@ export function generateDocumentSummary(
     true
   );
 }
+
+export function deleteConversation(conversationId: string): Promise<void> {
+  return request<void>(
+    `/conversations/${conversationId}`,
+    {
+      method: "DELETE",
+    },
+    true
+  );
+}

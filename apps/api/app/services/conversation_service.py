@@ -64,3 +64,19 @@ def delete_conversation_for_user(
 
     db.delete(conversation)
     db.commit()
+
+def delete_conversation_for_user(
+    db: Session,
+    conversation_id: uuid.UUID,
+    current_user: User,
+) -> None:
+    conversation = db.get(Conversation, conversation_id)
+
+    if conversation is None or conversation.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Conversation introuvable.",
+        )
+
+    db.delete(conversation)
+    db.commit()

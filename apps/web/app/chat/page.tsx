@@ -4,6 +4,7 @@ import { FormEvent, Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import {
+  deleteConversation,
   getConversation,
   listConversations,
   listDocuments,
@@ -40,6 +41,7 @@ function ChatContent() {
     string | null
   >(null);
   const [error, setError] = useState<string | null>(null);
+  const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
 
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
@@ -78,6 +80,7 @@ function ChatContent() {
 
   async function loadConversation(id: string) {
     setError(null);
+    setCopyFeedback(null);
     setLoadingConversationId(id);
     setActiveSource(null);
 
@@ -112,6 +115,7 @@ function ChatContent() {
     }
 
     setError(null);
+    setCopyFeedback(null);
     setLoading(true);
     setActiveSource(null);
 
@@ -152,11 +156,43 @@ function ChatContent() {
     }
   }
 
-  function startNewConversation() {
+  function clearCurrentChat() {
     setConversationId(null);
     setMessages([]);
+    setQuestion("");
     setError(null);
+    setCopyFeedback(null);
     setActiveSource(null);
+  }
+
+  function startNewConversation() {
+    clearCurrentChat();
+  }
+
+  async function handleDeleteConversation(id: string) {
+    setError(null);
+    setCopyFeedback(null);
+
+    try {
+      await deleteConversation(id);
+
+      if (conversationId === id) {
+        setConversationId(null);
+        setMessages([]);
+        setActiveSource(null);
+      }
+
+      await refreshConversations();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Erreur suppression conversation."
+      );
+    }
+  }
+
+  async function copyAssistantMessage(content: string) {
+    await navigator.clipboard.writeText(content);
+    setCopyFeedback("Réponse copiée.");
   }
 
   function toggleDocumentSelection(documentId: string, checked: boolean) {
@@ -184,12 +220,21 @@ function ChatContent() {
           <div className="flex items-center justify-between gap-2">
             <h2 className="font-semibold">Conversations</h2>
 
-            <button
-              onClick={startNewConversation}
-              className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
-            >
-              Nouveau
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={clearCurrentChat}
+                className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-200 hover:bg-slate-800"
+              >
+                Vider
+              </button>
+
+              <button
+                onClick={startNewConversation}
+                className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
+              >
+                Nouveau
+              </button>
+            </div>
           </div>
 
           <div className="mt-4 space-y-2">
@@ -198,27 +243,44 @@ function ChatContent() {
             )}
 
             {conversations.map((conversation) => (
-              <button
+              <div
                 key={conversation.id}
-                onClick={() => loadConversation(conversation.id)}
-                className={`w-full rounded-lg border px-3 py-2 text-left text-sm hover:bg-slate-800 ${
+                className={`rounded-lg border p-2 ${
                   conversationId === conversation.id
-                    ? "border-blue-500 bg-blue-500/10 text-blue-200"
-                    : "border-slate-800 text-slate-300"
+                    ? "border-blue-500 bg-blue-500/10"
+                    : "border-slate-800"
                 }`}
               >
-                <p className="line-clamp-2 font-medium">
-                  {conversation.title}
-                </p>
+                <button
+                  onClick={() => loadConversation(conversation.id)}
+                  className="w-full text-left text-sm"
+                >
+                  <p
+                    className={`line-clamp-2 font-medium ${
+                      conversationId === conversation.id
+                        ? "text-blue-200"
+                        : "text-slate-300"
+                    }`}
+                  >
+                    {conversation.title}
+                  </p>
 
-                <p className="mt-1 text-xs text-slate-500">
-                  {loadingConversationId === conversation.id
-                    ? "Chargement..."
-                    : new Date(conversation.updated_at).toLocaleString(
-                        "fr-FR"
-                      )}
-                </p>
-              </button>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {loadingConversationId === conversation.id
+                      ? "Chargement..."
+                      : new Date(conversation.updated_at).toLocaleString(
+                          "fr-FR"
+                        )}
+                  </p>
+                </button>
+
+                <button
+                  onClick={() => handleDeleteConversation(conversation.id)}
+                  className="mt-2 text-xs text-red-300 hover:text-red-200"
+                >
+                  Supprimer
+                </button>
+              </div>
             ))}
           </div>
         </aside>
@@ -247,6 +309,12 @@ function ChatContent() {
           {error && (
             <div className="m-5 rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-300">
               {error}
+            </div>
+          )}
+
+          {copyFeedback && (
+            <div className="mx-5 mb-3 rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm text-emerald-300">
+              {copyFeedback}
             </div>
           )}
 
@@ -282,6 +350,24 @@ function ChatContent() {
                 <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-100">
                   {message.content}
                 </p>
+
+                {message.role === "assistant" && (
+                  <button
+                    onClick={() => copyAssistantMessage(message.content)}
+                    className="mt-3 rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800"
+                  >
+                    Copier la réponse
+                  </button>
+                )}
+
+                {message.role === "assistant" &&
+                  (!message.sources || message.sources.length === 0) && (
+                    <div className="mt-3 rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-3 text-xs text-yellow-200">
+                      Aucune source n’a été retournée pour cette réponse. Essaie
+                      de baisser le score minimum ou d’augmenter le nombre de
+                      chunks récupérés.
+                    </div>
+                  )}
 
                 {message.sources && message.sources.length > 0 && (
                   <div className="mt-4 border-t border-slate-800 pt-3">
