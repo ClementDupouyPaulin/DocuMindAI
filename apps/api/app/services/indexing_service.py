@@ -178,8 +178,34 @@ def index_document_in_background(document_id: str, user_id: str) -> None:
 
         if document is not None:
             document.status = "FAILED"
-            document.error_message = str(exc)[:2000]
+            document.error_message = format_indexing_error(exc)
             db.commit()
 
     finally:
         db.close()
+        
+def format_indexing_error(error: Exception) -> str:
+    message = str(error)
+
+    if "insufficient_quota" in message or "exceeded your current quota" in message:
+        return (
+            "Quota OpenAI insuffisant ou limite atteinte. "
+            "Vérifie ton billing OpenAI, ton crédit API ou ta clé API."
+        )
+
+    if "401" in message or "invalid_api_key" in message:
+        return "Clé OpenAI invalide ou non autorisée."
+
+    if "OpenAI API key is not configured" in message:
+        return "Clé OpenAI non configurée côté backend."
+
+    if "timed out" in message.lower() or "timeout" in message.lower():
+        return "Délai dépassé pendant l’indexation. Réessaie dans quelques instants."
+
+    if "qdrant" in message.lower():
+        return "Erreur avec la base vectorielle Qdrant pendant l’indexation."
+
+    if "Stored file not found" in message:
+        return "Fichier introuvable sur le stockage local."
+
+    return message[:500]

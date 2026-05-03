@@ -16,17 +16,62 @@ function formatFileSize(size: number): string {
   return `${(size / 1024 / 1024).toFixed(1)} MB`;
 }
 
-function statusClass(status: string): string {
-  switch (status) {
-    case "INDEXED":
-      return "bg-emerald-500/10 text-emerald-300 border-emerald-500/30";
-    case "PROCESSING":
-      return "bg-yellow-500/10 text-yellow-300 border-yellow-500/30";
-    case "FAILED":
-      return "bg-red-500/10 text-red-300 border-red-500/30";
-    default:
-      return "bg-slate-500/10 text-slate-300 border-slate-500/30";
+function getStatusLabel(status: string): string {
+  if (status === "UPLOADED") return "À indexer";
+  if (status === "PROCESSING") return "Indexation";
+  if (status === "INDEXED") return "Indexé";
+  if (status === "FAILED") return "Erreur";
+  return status;
+}
+
+function getStatusClassName(status: string): string {
+  if (status === "INDEXED") {
+    return "border-emerald-500/40 bg-emerald-500/10 text-emerald-300";
   }
+
+  if (status === "PROCESSING") {
+    return "border-yellow-500/40 bg-yellow-500/10 text-yellow-300";
+  }
+
+  if (status === "FAILED") {
+    return "border-red-500/40 bg-red-500/10 text-red-300";
+  }
+
+  return "border-slate-500/40 bg-slate-500/10 text-slate-300";
+}
+
+function formatDocumentError(errorMessage?: string | null): string {
+  if (!errorMessage) {
+    return "Erreur inconnue pendant l’indexation.";
+  }
+
+  if (
+    errorMessage.includes("insufficient_quota") ||
+    errorMessage.includes("exceeded your current quota") ||
+    errorMessage.includes("Quota OpenAI")
+  ) {
+    return "Quota OpenAI insuffisant ou limite atteinte. Vérifie ton billing OpenAI.";
+  }
+
+  if (errorMessage.includes("OpenAI API key is not configured")) {
+    return "Clé OpenAI non configurée côté backend.";
+  }
+
+  if (errorMessage.includes("invalid_api_key") || errorMessage.includes("401")) {
+    return "Clé OpenAI invalide ou non autorisée.";
+  }
+
+  if (errorMessage.length > 240) {
+    return `${errorMessage.slice(0, 240)}...`;
+  }
+
+  return errorMessage;
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
 }
 
 export default function DocumentsPage() {
@@ -50,28 +95,22 @@ export default function DocumentsPage() {
     });
   }, []);
 
-  function delay(ms: number): Promise<void> {
-    return new Promise((resolve) => {
-        window.setTimeout(resolve, ms);
-    });
-  }
-
   async function pollDocumentIndexing(documentId: string) {
     for (let attempt = 0; attempt < 20; attempt += 1) {
-        await delay(1500);
+      await delay(1500);
 
-        const docs = await listDocuments();
-        setDocuments(docs);
+      const docs = await listDocuments();
+      setDocuments(docs);
 
-        const targetDocument = docs.find((document) => document.id === documentId);
+      const targetDocument = docs.find((document) => document.id === documentId);
 
-        if (!targetDocument) {
+      if (!targetDocument) {
         return;
-        }
+      }
 
-        if (targetDocument.status !== "PROCESSING") {
+      if (targetDocument.status !== "PROCESSING") {
         return;
-        }
+      }
     }
   }
 
@@ -81,30 +120,29 @@ export default function DocumentsPage() {
     const form = event.currentTarget;
 
     if (!file) {
-        setError("Choisis un fichier PDF, TXT ou DOCX.");
-        return;
+      setError("Choisis un fichier PDF, TXT ou DOCX.");
+      return;
     }
 
     setError(null);
     setLoading(true);
 
     try {
-        await uploadDocument(file, title || undefined);
+      await uploadDocument(file, title || undefined);
 
-        setTitle("");
-        setFile(null);
+      setTitle("");
+      setFile(null);
+      form.reset();
 
-        form.reset();
-
-        if (fileInputRef.current) {
+      if (fileInputRef.current) {
         fileInputRef.current.value = "";
-        }
+      }
 
-        await refreshDocuments();
+      await refreshDocuments();
     } catch (err) {
-        setError(err instanceof Error ? err.message : "Erreur upload.");
+      setError(err instanceof Error ? err.message : "Erreur upload.");
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
   }
 
@@ -113,14 +151,14 @@ export default function DocumentsPage() {
     setActionLoadingId(documentId);
 
     try {
-        await indexDocument(documentId);
-        await refreshDocuments();
-        await pollDocumentIndexing(documentId);
+      await indexDocument(documentId);
+      await refreshDocuments();
+      await pollDocumentIndexing(documentId);
     } catch (err) {
-        setError(err instanceof Error ? err.message : "Erreur indexation.");
-        await refreshDocuments();
+      setError(err instanceof Error ? err.message : "Erreur indexation.");
+      await refreshDocuments();
     } finally {
-        setActionLoadingId(null);
+      setActionLoadingId(null);
     }
   }
 
@@ -135,6 +173,35 @@ export default function DocumentsPage() {
       setError(err instanceof Error ? err.message : "Erreur suppression.");
     } finally {
       setActionLoadingId(null);
+    }
+  }
+
+  async function deleteFailedDocuments() {
+    const failedDocuments = documents.filter(
+      (document) => document.status === "FAILED"
+    );
+
+    if (failedDocuments.length === 0) {
+      return;
+    }
+
+    setError(null);
+    setLoading(true);
+
+    try {
+      await Promise.all(
+        failedDocuments.map((document) => deleteDocument(document.id))
+      );
+
+      await refreshDocuments();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Erreur pendant la suppression des documents en erreur."
+      );
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -165,29 +232,29 @@ export default function DocumentsPage() {
             </label>
 
             <label className="block">
-                <span className="text-sm text-slate-300">Fichier PDF/TXT/DOCX</span>
+              <span className="text-sm text-slate-300">Fichier PDF/TXT/DOCX</span>
 
-                <div className="mt-1 flex items-center gap-2">
-                    <input
-                    ref={fileInputRef}
-                    id="document-file"
-                    className="hidden"
-                    type="file"
-                    accept=".pdf,.txt,.docx"
-                    onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-                    />
+              <div className="mt-1 flex items-center gap-2">
+                <input
+                  ref={fileInputRef}
+                  id="document-file"
+                  className="hidden"
+                  type="file"
+                  accept=".pdf,.txt,.docx"
+                  onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+                />
 
-                    <label
-                    htmlFor="document-file"
-                    className="shrink-0 cursor-pointer rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 hover:bg-slate-800"
-                    >
-                    Choisir un fichier
-                    </label>
+                <label
+                  htmlFor="document-file"
+                  className="shrink-0 cursor-pointer rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 hover:bg-slate-800"
+                >
+                  Choisir un fichier
+                </label>
 
-                    <span className="min-w-0 flex-1 truncate rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-400">
-                    {file ? file.name : "Aucun fichier choisi"}
-                    </span>
-                </div>
+                <span className="min-w-0 flex-1 truncate rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-400">
+                  {file ? file.name : "Aucun fichier choisi"}
+                </span>
+              </div>
             </label>
 
             <button
@@ -201,7 +268,7 @@ export default function DocumentsPage() {
         </section>
 
         <section>
-          <div className="mb-4 flex items-center justify-between">
+          <div className="mb-4 flex items-center justify-between gap-3">
             <div>
               <h2 className="text-2xl font-bold">Mes documents</h2>
               <p className="text-sm text-slate-400">
@@ -209,12 +276,24 @@ export default function DocumentsPage() {
               </p>
             </div>
 
-            <button
-              onClick={() => refreshDocuments()}
-              className="rounded-lg border border-slate-700 px-3 py-2 text-sm hover:bg-slate-800"
-            >
-              Rafraîchir
-            </button>
+            <div className="flex items-center gap-2">
+              {documents.some((document) => document.status === "FAILED") && (
+                <button
+                  onClick={deleteFailedDocuments}
+                  disabled={loading}
+                  className="rounded-lg border border-red-500/40 px-3 py-2 text-sm text-red-300 hover:bg-red-500/10 disabled:opacity-60"
+                >
+                  Supprimer les erreurs
+                </button>
+              )}
+
+              <button
+                onClick={() => refreshDocuments()}
+                className="rounded-lg border border-slate-700 px-3 py-2 text-sm hover:bg-slate-800"
+              >
+                Rafraîchir
+              </button>
+            </div>
           </div>
 
           <div className="space-y-4">
@@ -230,17 +309,18 @@ export default function DocumentsPage() {
                 className="rounded-2xl border border-slate-800 bg-slate-900 p-5"
               >
                 <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                  <div>
+                  <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="text-lg font-semibold">
+                      <h3 className="truncate text-lg font-semibold">
                         {document.title}
                       </h3>
+
                       <span
-                        className={`rounded-full border px-2 py-1 text-xs ${statusClass(
+                        className={`rounded-full border px-2 py-1 text-xs font-semibold ${getStatusClassName(
                           document.status
                         )}`}
                       >
-                        {document.status}
+                        {getStatusLabel(document.status)}
                       </span>
                     </div>
 
@@ -249,26 +329,36 @@ export default function DocumentsPage() {
                       {formatFileSize(document.file_size)}
                     </p>
 
-                    {document.error_message && (
-                      <p className="mt-2 text-sm text-red-300">
-                        {document.error_message}
-                      </p>
+                    {document.status === "FAILED" && document.error_message && (
+                      <div className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 p-3">
+                        <p className="text-sm font-medium text-red-300">
+                          Échec de l’indexation
+                        </p>
+                        <p className="mt-1 text-sm leading-5 text-red-200">
+                          {formatDocumentError(document.error_message)}
+                        </p>
+                      </div>
                     )}
                   </div>
 
-                  <div className="flex gap-2">
+                  <div className="flex shrink-0 gap-2">
                     <button
-                        onClick={() => handleIndex(document.id)}
-                        disabled={
-                            actionLoadingId === document.id || document.status === "PROCESSING"
-                        }
-                        className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-60"
+                      onClick={() => handleIndex(document.id)}
+                      disabled={
+                        actionLoadingId === document.id ||
+                        document.status === "PROCESSING"
+                      }
+                      className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-60"
                     >
-                        {document.status === "PROCESSING"
-                            ? "Indexation..."
-                            : actionLoadingId === document.id
-                            ? "Action..."
-                            : "Indexer"}
+                      {document.status === "PROCESSING"
+                        ? "Indexation..."
+                        : actionLoadingId === document.id
+                          ? "Action..."
+                          : document.status === "FAILED"
+                            ? "Réessayer"
+                            : document.status === "INDEXED"
+                              ? "Réindexer"
+                              : "Indexer"}
                     </button>
 
                     <button
