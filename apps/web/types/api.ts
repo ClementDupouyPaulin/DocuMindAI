@@ -34,6 +34,7 @@ export type Source = {
   chunk_index: number;
   score: number;
   content_preview: string;
+  content: string;
 };
 
 export type ChatResponse = {
@@ -61,4 +62,14 @@ export type Message = {
 
 export type ConversationDetail = Conversation & {
   messages: Message[];
+};
+
+export type DashboardStats = {
+  total_documents: number;
+  indexed_documents: number;
+  processing_documents: number;
+  failed_documents: number;
+  total_chunks: number;
+  total_conversations: number;
+  total_messages: number;
 };

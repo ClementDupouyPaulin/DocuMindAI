@@ -4,6 +4,7 @@ import type {
   ChatResponse,
   Conversation,
   ConversationDetail,
+  DashboardStats,
   DocumentItem,
   User,
 } from "@/types/api";
@@ -187,4 +188,8 @@ export function getConversation(
     {},
     true
   );
+}
+
+export function getDashboardStats(): Promise<DashboardStats> {
+  return request<DashboardStats>("/stats/dashboard", {}, true);
 }
