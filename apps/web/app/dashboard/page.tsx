@@ -36,12 +36,12 @@ function AiModeCard({ aiStatus }: { aiStatus: AiStatus }) {
 
         <span
           className={`w-fit rounded-full border px-3 py-1 text-sm font-medium ${
-            aiStatus.demo_mode
+            aiStatus.llm_provider === "mock"
               ? "border-blue-500/40 bg-blue-500/10 text-blue-300"
               : "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
           }`}
         >
-          {aiStatus.demo_mode ? "Mode démo sans OpenAI" : "Mode OpenAI"}
+          {aiStatus.llm_provider === "mock" ? "Mode démo sans OpenAI" : "Mode OpenAI"}
         </span>
       </div>
 
@@ -67,7 +67,7 @@ function AiModeCard({ aiStatus }: { aiStatus: AiStatus }) {
         </div>
       </div>
 
-      {aiStatus.demo_mode && (
+      {aiStatus.llm_provider === "mock" && (
         <div className="mt-5 rounded-xl border border-blue-500/30 bg-blue-500/10 p-4">
           <p className="text-sm font-medium text-blue-300">
             Mode démonstration actif
