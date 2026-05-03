@@ -1,82 +1,85 @@
 # DocuMind AI
 
-DocuMind AI is a full-stack RAG platform that allows users to upload PDF and TXT documents, index them into a vector database, and ask natural-language questions with sourced answers.
+DocuMind AI est une plateforme web RAG permettant d’importer des documents PDF, DOCX et TXT, de les indexer dans une base vectorielle, puis de poser des questions en langage naturel avec des réponses sourcées à partir des documents.
 
-The goal of this project is to demonstrate a complete AI-oriented software architecture: document ingestion, text extraction, chunking, embeddings, vector search, RAG answer generation, authentication, full-stack UI, PostgreSQL persistence, Qdrant vector storage, Docker, and technical documentation.
+Le projet a été conçu comme un projet portfolio full-stack IA/Data/Backend pour démontrer une chaîne complète : ingestion documentaire, extraction, chunking, embeddings, recherche vectorielle, génération augmentée, citations, authentification, dashboard, Docker et CI/CD.
+
+## Demo
+
+Frontend public :
+
+https://clementdupouypaulin.com/DocuMindAI/
+
+> Note : le frontend est déployé sur GitHub Pages. Certaines fonctionnalités comme l’authentification, l’upload, l’indexation et le chat nécessitent que le backend FastAPI soit lancé localement ou déployé publiquement.
 
 ## Features
 
-### Authentication
-- User registration
-- User login
-- JWT authentication
-- Protected API routes
-- Protected frontend pages
-
-### Document management
-- Upload PDF/TXT files
-- Store uploaded files locally
-- Store document metadata in PostgreSQL
-- Display document status
-- Delete documents
-- Re-index documents
-
-### RAG pipeline
-- Extract text from documents
-- Clean extracted text
-- Split text into chunks
-- Generate embeddings
-- Store vectors in Qdrant
-- Search relevant chunks by semantic similarity
-- Generate answers with OpenAI
-- Return sourced answers
-
-### Chat
-- Ask questions about indexed documents
-- Retrieve relevant sources
-- Display citations and previews
-- Save conversations
-- Load previous conversations
+- Authentification utilisateur avec JWT
+- Upload de documents PDF, DOCX et TXT
+- Extraction automatique du texte
+- Découpage en chunks
+- Génération d’embeddings
+- Stockage vectoriel dans Qdrant
+- Stockage relationnel dans PostgreSQL
+- Chat documentaire basé sur RAG
+- Réponses sourcées avec document, chunk, score et extrait utilisé
+- Filtres RAG par document
+- Score minimum de similarité configurable
+- Historique des conversations
+- Dashboard analytique
+- Indexation en arrière-plan
+- Gestion propre des erreurs d’indexation
+- Interface responsive en Next.js
+- Docker Compose
+- Tests backend avec Pytest
+- CI backend et frontend avec GitHub Actions
+- Déploiement frontend GitHub Pages
 
 ## Tech Stack
 
 ### Frontend
+
 - Next.js
 - TypeScript
 - Tailwind CSS
+- GitHub Pages
 
 ### Backend
+
 - FastAPI
 - Python
 - SQLAlchemy
 - Alembic
-- Pydantic
+- Pytest
+- Ruff
+- Black
 
-### Data
+### Data / AI
+
 - PostgreSQL
 - Qdrant
-
-### AI
 - OpenAI API
 - Embeddings
-- Retrieval-Augmented Generation
+- RAG pipeline
 
 ### DevOps
+
 - Docker
 - Docker Compose
-- Git
-- GitHub
+- GitHub Actions
+- GitHub Pages
 
 ## Architecture
 
 ```txt
-documind-ai/
+DocuMind AI
 │
 ├── apps/
-│   ├── web/          # Next.js frontend
-│   └── api/          # FastAPI backend
+│   ├── web/                  # Frontend Next.js
+│   └── api/                  # Backend FastAPI
 │
-├── docs/             # Technical documentation
-├── storage/          # Local uploaded files
+├── docs/                     # Documentation technique
+├── storage/                  # Stockage local des uploads
+├── .github/workflows/        # CI/CD
 ├── docker-compose.yml
 └── README.md
