@@ -297,6 +297,13 @@ ${summary.summary}
                 </div>
 
                 <div className="flex shrink-0 flex-wrap gap-2">
+                  <Link
+                    href={`/chat?documentId=${document.id}`}
+                    className="rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-200 hover:bg-slate-800"
+                  >
+                    Questionner ce document
+                  </Link>
+
                   <button
                     onClick={() => handleGenerateSummary(Boolean(summary))}
                     disabled={summaryLoading || chunks.length === 0}

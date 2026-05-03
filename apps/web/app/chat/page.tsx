@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, Suspense, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import {
   getConversation,
@@ -21,7 +22,10 @@ type ChatMessage = {
   sources?: Source[];
 };
 
-export default function ChatPage() {
+function ChatContent() {
+  const searchParams = useSearchParams();
+  const initialDocumentId = searchParams.get("documentId");
+
   const [question, setQuestion] = useState("");
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -29,6 +33,7 @@ export default function ChatPage() {
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [selectedDocumentIds, setSelectedDocumentIds] = useState<string[]>([]);
   const [minScore, setMinScore] = useState(0);
+  const [topK, setTopK] = useState(5);
   const [activeSource, setActiveSource] = useState<Source | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingConversationId, setLoadingConversationId] = useState<
@@ -45,7 +50,16 @@ export default function ChatPage() {
 
   async function refreshIndexedDocuments() {
     const docs = await listDocuments();
-    setDocuments(docs.filter((document) => document.status === "INDEXED"));
+    const indexedDocs = docs.filter((document) => document.status === "INDEXED");
+
+    setDocuments(indexedDocs);
+
+    if (
+      initialDocumentId &&
+      indexedDocs.some((document) => document.id === initialDocumentId)
+    ) {
+      setSelectedDocumentIds([initialDocumentId]);
+    }
   }
 
   useEffect(() => {
@@ -54,7 +68,9 @@ export default function ChatPage() {
         setError(err instanceof Error ? err.message : "Erreur chargement.");
       }
     );
-  }, []);
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialDocumentId]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -111,7 +127,7 @@ export default function ChatPage() {
       const response: ChatResponse = await queryChat({
         question: trimmedQuestion,
         conversation_id: conversationId,
-        top_k: 5,
+        top_k: topK,
         document_ids:
           selectedDocumentIds.length > 0 ? selectedDocumentIds : null,
         min_score: minScore,
@@ -145,7 +161,14 @@ export default function ChatPage() {
 
   function toggleDocumentSelection(documentId: string, checked: boolean) {
     if (checked) {
-      setSelectedDocumentIds((current) => [...current, documentId]);
+      setSelectedDocumentIds((current) => {
+        if (current.includes(documentId)) {
+          return current;
+        }
+
+        return [...current, documentId];
+      });
+
       return;
     }
 
@@ -160,6 +183,7 @@ export default function ChatPage() {
         <aside className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
           <div className="flex items-center justify-between gap-2">
             <h2 className="font-semibold">Conversations</h2>
+
             <button
               onClick={startNewConversation}
               className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
@@ -186,6 +210,7 @@ export default function ChatPage() {
                 <p className="line-clamp-2 font-medium">
                   {conversation.title}
                 </p>
+
                 <p className="mt-1 text-xs text-slate-500">
                   {loadingConversationId === conversation.id
                     ? "Chargement..."
@@ -201,9 +226,22 @@ export default function ChatPage() {
         <section className="flex min-h-0 flex-col rounded-2xl border border-slate-800 bg-slate-900">
           <div className="border-b border-slate-800 p-5">
             <h1 className="text-2xl font-bold">Chat documentaire</h1>
+
             <p className="mt-1 text-sm text-slate-400">
               Pose une question sur tes documents indexés.
             </p>
+
+            <div className="mt-3 rounded-xl border border-slate-800 bg-slate-950 p-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                Scope RAG
+              </p>
+
+              <p className="mt-1 text-sm text-slate-300">
+                {selectedDocumentIds.length === 0
+                  ? "Recherche dans tous les documents indexés."
+                  : `Recherche limitée à ${selectedDocumentIds.length} document(s) sélectionné(s).`}
+              </p>
+            </div>
           </div>
 
           {error && (
@@ -219,6 +257,7 @@ export default function ChatPage() {
                   <p className="text-lg font-medium text-slate-300">
                     Commence une question
                   </p>
+
                   <p className="mt-2 text-sm">
                     Exemple : “Résume ce document” ou “Quels sont les points
                     importants ?”
@@ -294,6 +333,23 @@ export default function ChatPage() {
             onSubmit={handleSubmit}
             className="shrink-0 border-t border-slate-800 p-5"
           >
+            <div className="mb-3 flex flex-wrap gap-2">
+              {[
+                "Résume ce document",
+                "Quels sont les points clés ?",
+                "Quelles notions importantes dois-je retenir ?",
+              ].map((presetQuestion) => (
+                <button
+                  key={presetQuestion}
+                  type="button"
+                  onClick={() => setQuestion(presetQuestion)}
+                  className="rounded-full border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800"
+                >
+                  {presetQuestion}
+                </button>
+              ))}
+            </div>
+
             <div className="flex gap-3">
               <textarea
                 value={question}
@@ -317,6 +373,18 @@ export default function ChatPage() {
           <h2 className="font-semibold">Filtres RAG</h2>
 
           <div className="mt-4 space-y-4">
+            <div className="rounded-xl border border-slate-800 bg-slate-950 p-3">
+              <p className="text-sm font-medium text-slate-300">
+                Scope actuel
+              </p>
+
+              <p className="mt-2 text-xs leading-5 text-slate-500">
+                {selectedDocumentIds.length === 0
+                  ? "Tous les documents indexés sont utilisés pour la recherche RAG."
+                  : `${selectedDocumentIds.length} document(s) sélectionné(s). La réponse sera limitée à ces documents.`}
+              </p>
+            </div>
+
             <div>
               <div className="flex items-center justify-between gap-2">
                 <p className="text-sm font-medium text-slate-300">
@@ -364,6 +432,7 @@ export default function ChatPage() {
                       <span className="block truncate font-medium text-slate-200">
                         {document.title}
                       </span>
+
                       <span className="block truncate text-xs text-slate-500">
                         {document.filename}
                       </span>
@@ -391,6 +460,27 @@ export default function ChatPage() {
               <p className="mt-1 text-xs text-slate-500">
                 Plus le score est élevé, plus les sources doivent être proches
                 de la question.
+              </p>
+            </label>
+
+            <label className="block">
+              <span className="text-sm font-medium text-slate-300">
+                Nombre de chunks récupérés : {topK}
+              </span>
+
+              <input
+                type="range"
+                min="1"
+                max="10"
+                step="1"
+                value={topK}
+                onChange={(event) => setTopK(Number(event.target.value))}
+                className="mt-2 w-full"
+              />
+
+              <p className="mt-1 text-xs text-slate-500">
+                Plus la valeur est élevée, plus DocuMind récupère de contexte,
+                mais les réponses peuvent être moins ciblées.
               </p>
             </label>
           </div>
@@ -429,5 +519,21 @@ export default function ChatPage() {
         </aside>
       </div>
     </AppShell>
+  );
+}
+
+export default function ChatPage() {
+  return (
+    <Suspense
+      fallback={
+        <AppShell>
+          <div className="rounded-2xl border border-slate-800 bg-slate-900 p-8 text-center text-slate-400">
+            Chargement du chat...
+          </div>
+        </AppShell>
+      }
+    >
+      <ChatContent />
+    </Suspense>
   );
 }
