@@ -6,11 +6,12 @@ import { useSearchParams } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import {
   deleteDocument,
+  generateDocumentSummary,
   getDocument,
   indexDocument,
   listDocumentChunks,
 } from "@/lib/api";
-import type { DocumentChunk, DocumentItem } from "@/types/api";
+import type { DocumentChunk, DocumentItem, DocumentSummary } from "@/types/api";
 
 function formatFileSize(size: number): string {
   if (size < 1024) return `${size} B`;
@@ -91,8 +92,10 @@ function DocumentDetailContent() {
 
   const [document, setDocument] = useState<DocumentItem | null>(null);
   const [chunks, setChunks] = useState<DocumentChunk[]>([]);
+  const [summary, setSummary] = useState<DocumentSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [summaryLoading, setSummaryLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const totalTokens = useMemo(() => {
@@ -150,6 +153,26 @@ function DocumentDetailContent() {
     }
   }
 
+  async function handleGenerateSummary() {
+    if (!documentId) return;
+
+    setSummaryLoading(true);
+    setError(null);
+
+    try {
+      const generatedSummary = await generateDocumentSummary(documentId);
+      setSummary(generatedSummary);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Erreur pendant la génération du résumé."
+      );
+    } finally {
+      setSummaryLoading(false);
+    }
+  }
+
   async function handleDelete() {
     if (!documentId) return;
 
@@ -179,7 +202,7 @@ function DocumentDetailContent() {
 
             <h1 className="mt-3 text-3xl font-bold">Détail du document</h1>
             <p className="mt-2 text-slate-400">
-              Métadonnées, statut d’indexation et chunks extraits.
+              Métadonnées, statut d’indexation, résumé et chunks extraits.
             </p>
           </div>
 
@@ -228,7 +251,15 @@ function DocumentDetailContent() {
                   </p>
                 </div>
 
-                <div className="flex shrink-0 gap-2">
+                <div className="flex shrink-0 flex-wrap gap-2">
+                  <button
+                    onClick={handleGenerateSummary}
+                    disabled={summaryLoading || chunks.length === 0}
+                    className="rounded-lg border border-blue-500/40 px-4 py-2 text-sm text-blue-300 hover:bg-blue-500/10 disabled:opacity-60"
+                  >
+                    {summaryLoading ? "Résumé..." : "Générer un résumé"}
+                  </button>
+
                   <button
                     onClick={handleReindex}
                     disabled={actionLoading || document.status === "PROCESSING"}
@@ -275,6 +306,56 @@ function DocumentDetailContent() {
                   )}
                 />
               </div>
+            </section>
+
+            <section className="mt-8 rounded-2xl border border-slate-800 bg-slate-900 p-6">
+              <div className="flex flex-col justify-between gap-3 md:flex-row md:items-end">
+                <div>
+                  <h2 className="text-2xl font-bold">Résumé automatique</h2>
+                  <p className="mt-1 text-sm text-slate-400">
+                    Génère une synthèse du document à partir des chunks indexés.
+                  </p>
+                </div>
+
+                <button
+                  onClick={handleGenerateSummary}
+                  disabled={summaryLoading || chunks.length === 0}
+                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+                >
+                  {summaryLoading ? "Génération..." : "Générer"}
+                </button>
+              </div>
+
+              {!summary && !summaryLoading && (
+                <div className="mt-6 rounded-xl border border-dashed border-slate-700 p-8 text-center text-slate-400">
+                  Aucun résumé généré pour le moment.
+                </div>
+              )}
+
+              {summaryLoading && (
+                <div className="mt-6 rounded-xl border border-slate-800 bg-slate-950 p-6 text-slate-400">
+                  Génération du résumé en cours...
+                </div>
+              )}
+
+              {summary && (
+                <div className="mt-6 rounded-xl border border-slate-800 bg-slate-950 p-5">
+                  <div className="mb-4 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                    <span>{summary.chunks_used} chunk(s) utilisés</span>
+                    <span>·</span>
+                    <span>Provider : {summary.provider}</span>
+                    <span>·</span>
+                    <span>
+                      Généré le{" "}
+                      {new Date(summary.generated_at).toLocaleString("fr-FR")}
+                    </span>
+                  </div>
+
+                  <p className="whitespace-pre-wrap text-sm leading-7 text-slate-200">
+                    {summary.summary}
+                  </p>
+                </div>
+              )}
             </section>
 
             <section className="mt-8 rounded-2xl border border-slate-800 bg-slate-900 p-6">

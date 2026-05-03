@@ -8,6 +8,8 @@ from app.db.session import get_db
 from app.models.user import User
 from app.schemas.chunk import DocumentChunkRead
 from app.schemas.document import DocumentRead
+from app.schemas.document_summary import DocumentSummaryRead
+from app.services.document_summary_service import summarize_document_for_user
 from app.services.document_service import (
     create_document_from_upload,
     delete_document_for_user,
@@ -98,6 +100,18 @@ def delete_document(
     db: Session = Depends(get_db),
 ) -> None:
     delete_document_for_user(
+        db=db,
+        document_id=document_id,
+        current_user=current_user,
+    )
+
+@router.post("/{document_id}/summary", response_model=DocumentSummaryRead)
+def generate_document_summary(
+    document_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> DocumentSummaryRead:
+    return summarize_document_for_user(
         db=db,
         document_id=document_id,
         current_user=current_user,

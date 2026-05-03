@@ -8,6 +8,7 @@ import type {
   DashboardStats,
   DocumentChunk,
   DocumentItem,
+  DocumentSummary,
   User,
 } from "@/types/api";
 
@@ -208,4 +209,16 @@ export function listDocumentChunks(
   documentId: string
 ): Promise<DocumentChunk[]> {
   return request<DocumentChunk[]>(`/documents/${documentId}/chunks`, {}, true);
+}
+
+export function generateDocumentSummary(
+  documentId: string
+): Promise<DocumentSummary> {
+  return request<DocumentSummary>(
+    `/documents/${documentId}/summary`,
+    {
+      method: "POST",
+    },
+    true
+  );
 }

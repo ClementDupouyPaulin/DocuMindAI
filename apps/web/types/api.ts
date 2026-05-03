@@ -91,3 +91,12 @@ export type DocumentChunk = {
   page_number?: number | null;
   created_at: string;
 };
+
+export type DocumentSummary = {
+  document_id: string;
+  title: string;
+  summary: string;
+  chunks_used: number;
+  provider: string;
+  generated_at: string;
+};
