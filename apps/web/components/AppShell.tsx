@@ -55,6 +55,9 @@ export function AppShell({ children }: AppShellProps) {
             <Link href="/chat" className="text-slate-300 hover:text-white">
               Chat
             </Link>
+            <Link href="/settings" className="hover:text-blue-300">
+              Paramètres
+            </Link>
             <button
               onClick={logout}
               className="rounded-lg bg-red-500 px-3 py-2 text-sm font-medium text-white hover:bg-red-600"

@@ -76,10 +76,12 @@ export type DashboardStats = {
 
 export type AiStatus = {
   llm_provider: string;
-  embedding_provider: string;
   llm_model: string;
+  embedding_provider: string;
   embedding_model: string;
-  demo_mode: boolean;
+  openai_configured: boolean;
+  mode_label: string;
+  message: string;
 };
 
 export type DocumentChunk = {
