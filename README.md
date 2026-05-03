@@ -71,7 +71,6 @@ https://clementdupouypaulin.com/DocuMindAI/
 
 ## Architecture
 
-```txt
 DocuMind AI
 │
 ├── apps/
@@ -83,3 +82,29 @@ DocuMind AI
 ├── .github/workflows/        # CI/CD
 ├── docker-compose.yml
 └── README.md
+
+## Main Screens
+
+### Landing page
+
+Page publique présentant DocuMind AI, son objectif, sa stack et les fonctionnalités principales.
+
+![Landing page](docs/screenshots/landing.png)
+
+### Dashboard
+
+Dashboard analytique affichant les métriques principales de l’espace utilisateur : documents, chunks, conversations, messages et erreurs d’indexation.
+
+![Dashboard](docs/screenshots/dashboard.png)
+
+### Documents
+
+Page de gestion documentaire permettant d’uploader, indexer, réindexer, supprimer et suivre le statut des documents PDF, DOCX et TXT.
+
+![Documents](docs/screenshots/documents.png)
+
+### Chat RAG
+
+Interface de chat documentaire avec filtres RAG, sélection des documents, score minimum, réponses sourcées et visualisation des extraits utilisés.
+
+![Chat RAG](docs/screenshots/chat.png)
