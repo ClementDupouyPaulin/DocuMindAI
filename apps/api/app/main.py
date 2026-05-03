@@ -7,6 +7,9 @@ from app.api.routes.conversations import router as conversations_router
 from app.api.routes.documents import router as documents_router
 from app.api.routes.health import router as health_router
 from app.api.routes.stats import router as stats_router
+from app.core.config import get_settings
+
+settings = get_settings()
 
 app = FastAPI(
     title="DocuMind AI",
@@ -14,15 +17,15 @@ app = FastAPI(
     description="DocuMind AI API - RAG document assistant backend",
 )
 
+allowed_origins = [
+    origin.strip()
+    for origin in settings.cors_origins.split(",")
+    if origin.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "https://clementdupouypaulin.com",
-        "https://clementdupouypaulin.com/DocuMindAI",
-        "https://clementdupouypaulin.github.io",
-    ],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -33,4 +36,4 @@ app.include_router(auth_router, prefix="/auth", tags=["Auth"])
 app.include_router(documents_router, prefix="/documents", tags=["Documents"])
 app.include_router(chat_router, prefix="/chat", tags=["Chat"])
 app.include_router(conversations_router, prefix="/conversations", tags=["Conversations"])
-app.include_router(stats_router)
+app.include_router(stats_router, prefix="/stats", tags=["Stats"])

@@ -18,20 +18,25 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 60
 
     openai_api_key: str | None = None
-    llm_provider: str = "openai"
-    llm_model: str = "gpt-4.1-mini"
-    embedding_provider: str = "openai"
+
+    # Par défaut : mode portfolio/demo sans consommation OpenAI.
+    # En production réelle, tu override avec LLM_PROVIDER=openai.
+    llm_provider: str = "mock"
+    llm_model: str = "mock"
+
+    embedding_provider: str = "mock"
     embedding_model: str = "text-embedding-3-small"
     embedding_dimension: int = 1536
 
     upload_dir: str = "/app/storage/uploads"
     max_upload_size_mb: int = 25
 
-    cors_origins: str = "http://localhost:3000"
+    cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
 
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
+        extra="ignore",
     )
 
     @field_validator("database_url", mode="before")
@@ -47,6 +52,24 @@ class Settings(BaseSettings):
 
         return url
 
+    @field_validator("openai_api_key", "qdrant_api_key", mode="before")
+    @classmethod
+    def empty_string_to_none(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+
+        cleaned_value = str(value).strip()
+
+        if cleaned_value == "":
+            return None
+
+        return cleaned_value
+
+    @field_validator("llm_provider", "embedding_provider", mode="before")
+    @classmethod
+    def normalize_provider(cls, value: str) -> str:
+        return str(value).strip().lower()
+
 
 @lru_cache
 def get_settings() -> Settings:
@@ -56,4 +79,8 @@ def get_settings() -> Settings:
 def get_cors_origins() -> list[str]:
     settings = get_settings()
 
-    return [origin.strip() for origin in settings.cors_origins.split(",") if origin.strip()]
+    return [
+        origin.strip()
+        for origin in settings.cors_origins.split(",")
+        if origin.strip()
+    ]

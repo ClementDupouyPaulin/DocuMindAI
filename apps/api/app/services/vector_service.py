@@ -12,7 +12,10 @@ settings = get_settings()
 
 class VectorService:
     def __init__(self) -> None:
-        self.client = QdrantClient(url=settings.qdrant_url)
+        self.client = QdrantClient(
+            url=settings.qdrant_url,
+            api_key=settings.qdrant_api_key,
+        )
         self.collection_name = settings.qdrant_collection_name
 
     def ensure_collection_exists(self) -> None:
