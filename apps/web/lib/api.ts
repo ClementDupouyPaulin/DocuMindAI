@@ -1,5 +1,6 @@
 import { clearAccessToken, getAccessToken } from "./auth";
 import type {
+  AiStatus,
   AuthResponse,
   ChatResponse,
   Conversation,
@@ -192,4 +193,8 @@ export function getConversation(
 
 export function getDashboardStats(): Promise<DashboardStats> {
   return request<DashboardStats>("/stats/dashboard", {}, true);
+}
+
+export function getAiStatus(): Promise<AiStatus> {
+  return request<AiStatus>("/health/ai");
 }

@@ -1,39 +1,45 @@
-from fastapi import APIRouter, Depends
-from qdrant_client import QdrantClient
+from fastapi import APIRouter
 from sqlalchemy import text
-from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-from app.db.session import get_db
+from app.db.session import SessionLocal
+from app.schemas.ai_status import AiStatusRead
+from app.services.vector_service import vector_service
 
 router = APIRouter()
-settings = get_settings()
 
 
 @router.get("")
 def health_check() -> dict[str, str]:
-    return {
-        "status": "ok",
-        "service": "documind-api",
-    }
+    return {"status": "ok"}
 
 
 @router.get("/db")
-def database_health_check(db: Session = Depends(get_db)) -> dict[str, str]:
-    db.execute(text("SELECT 1"))
+def health_check_db() -> dict[str, str]:
+    with SessionLocal() as db:
+        db.execute(text("SELECT 1"))
 
-    return {
-        "status": "ok",
-        "service": "postgres",
-    }
+    return {"status": "ok"}
 
 
 @router.get("/qdrant")
-def qdrant_health_check() -> dict[str, str]:
-    client = QdrantClient(url=settings.qdrant_url)
-    client.get_collections()
+def health_check_qdrant() -> dict[str, str]:
+    vector_service.ensure_collection_exists()
 
-    return {
-        "status": "ok",
-        "service": "qdrant",
-    }
+    return {"status": "ok"}
+
+
+@router.get("/ai", response_model=AiStatusRead)
+def get_ai_status() -> AiStatusRead:
+    settings = get_settings()
+
+    llm_provider = settings.llm_provider.lower()
+    embedding_provider = settings.embedding_provider.lower()
+
+    return AiStatusRead(
+        llm_provider=llm_provider,
+        embedding_provider=embedding_provider,
+        llm_model=settings.llm_model,
+        embedding_model=settings.embedding_model,
+        demo_mode=llm_provider == "mock" or embedding_provider == "mock",
+    )

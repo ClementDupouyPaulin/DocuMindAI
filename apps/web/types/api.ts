@@ -73,3 +73,11 @@ export type DashboardStats = {
   total_conversations: number;
   total_messages: number;
 };
+
+export type AiStatus = {
+  llm_provider: string;
+  embedding_provider: string;
+  llm_model: string;
+  embedding_model: string;
+  demo_mode: boolean;
+};
