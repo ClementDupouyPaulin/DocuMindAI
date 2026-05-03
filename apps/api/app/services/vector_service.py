@@ -80,63 +80,65 @@ class VectorService:
             ),
         )
 
-        def search_similar_chunks(
-            self,
-            query_vector: list[float],
-            user_id: uuid.UUID,
-            limit: int = 5,
-            document_ids: list[uuid.UUID] | None = None,
-            min_score: float = 0.0,
-        ) -> list[dict]:
-            self.ensure_collection_exists()
+    def search_similar_chunks(
+        self,
+        query_vector: list[float],
+        user_id: uuid.UUID,
+        limit: int = 5,
+        document_ids: list[uuid.UUID] | None = None,
+        min_score: float = 0.0,
+    ) -> list[dict]:
+        self.ensure_collection_exists()
 
-            must_conditions = [
+        must_conditions = [
+            models.FieldCondition(
+                key="user_id",
+                match=models.MatchValue(value=str(user_id)),
+            )
+        ]
+
+        if document_ids:
+            must_conditions.append(
                 models.FieldCondition(
-                    key="user_id",
-                    match=models.MatchValue(value=str(user_id)),
+                    key="document_id",
+                    match=models.MatchAny(
+                        any=[str(document_id) for document_id in document_ids]
+                    ),
                 )
-            ]
-
-            if document_ids:
-                must_conditions.append(
-                    models.FieldCondition(
-                        key="document_id",
-                        match=models.MatchAny(any=[str(document_id) for document_id in document_ids]),
-                    )
-                )
-
-            result = self.client.query_points(
-                collection_name=self.collection_name,
-                query=query_vector,
-                query_filter=models.Filter(must=must_conditions),
-                limit=limit,
-                with_payload=True,
             )
 
-            points = getattr(result, "points", [])
-            results: list[dict] = []
+        result = self.client.query_points(
+            collection_name=self.collection_name,
+            query=query_vector,
+            query_filter=models.Filter(must=must_conditions),
+            limit=limit,
+            with_payload=True,
+        )
 
-            for point in points:
-                if float(point.score) < min_score:
-                    continue
+        points = getattr(result, "points", [])
+        results: list[dict] = []
 
-                payload = point.payload or {}
+        for point in points:
+            if float(point.score) < min_score:
+                continue
 
-                results.append(
-                    {
-                        "score": float(point.score),
-                        "chunk_id": payload.get("chunk_id"),
-                        "document_id": payload.get("document_id"),
-                        "user_id": payload.get("user_id"),
-                        "filename": payload.get("filename"),
-                        "title": payload.get("title"),
-                        "chunk_index": payload.get("chunk_index"),
-                        "page_number": payload.get("page_number"),
-                        "content": payload.get("content"),
-                    }
-                )
+            payload = point.payload or {}
 
-            return results
+            results.append(
+                {
+                    "score": float(point.score),
+                    "chunk_id": payload.get("chunk_id"),
+                    "document_id": payload.get("document_id"),
+                    "user_id": payload.get("user_id"),
+                    "filename": payload.get("filename"),
+                    "title": payload.get("title"),
+                    "chunk_index": payload.get("chunk_index"),
+                    "page_number": payload.get("page_number"),
+                    "content": payload.get("content"),
+                }
+            )
+
+        return results
 
 
 vector_service = VectorService()
