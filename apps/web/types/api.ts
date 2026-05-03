@@ -88,15 +88,16 @@ export type DocumentChunk = {
   chunk_index: number;
   content: string;
   token_count: number;
-  page_number?: number | null;
+  page_number?: number | null; 
   created_at: string;
 };
 
 export type DocumentSummary = {
+  id: string;
   document_id: string;
   title: string;
   summary: string;
   chunks_used: number;
   provider: string;
-  generated_at: string;
+  created_at: string;
 };

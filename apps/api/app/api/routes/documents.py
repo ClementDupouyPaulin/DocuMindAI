@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, File, Form, UploadFile, status, BackgroundTasks
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, Query, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
@@ -9,12 +9,16 @@ from app.models.user import User
 from app.schemas.chunk import DocumentChunkRead
 from app.schemas.document import DocumentRead
 from app.schemas.document_summary import DocumentSummaryRead
-from app.services.document_summary_service import summarize_document_for_user
 from app.services.document_service import (
     create_document_from_upload,
     delete_document_for_user,
     get_document_for_user,
     list_documents_for_user,
+)
+
+from app.services.document_summary_service import (
+    get_latest_summary_for_user,
+    summarize_document_for_user,
 )
 from app.services.indexing_service import enqueue_document_indexing, list_chunks_for_document
 
@@ -105,9 +109,23 @@ def delete_document(
         current_user=current_user,
     )
 
+@router.get("/{document_id}/summary", response_model=DocumentSummaryRead | None)
+def get_document_summary(
+    document_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> DocumentSummaryRead | None:
+    return get_latest_summary_for_user(
+        db=db,
+        document_id=document_id,
+        current_user=current_user,
+    )
+
+
 @router.post("/{document_id}/summary", response_model=DocumentSummaryRead)
 def generate_document_summary(
     document_id: uuid.UUID,
+    force: bool = Query(default=False),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> DocumentSummaryRead:
@@ -115,4 +133,5 @@ def generate_document_summary(
         db=db,
         document_id=document_id,
         current_user=current_user,
+        force=force,
     )

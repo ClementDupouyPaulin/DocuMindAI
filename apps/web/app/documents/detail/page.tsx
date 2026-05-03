@@ -8,6 +8,7 @@ import {
   deleteDocument,
   generateDocumentSummary,
   getDocument,
+  getDocumentSummary,
   indexDocument,
   listDocumentChunks,
 } from "@/lib/api";
@@ -96,6 +97,7 @@ function DocumentDetailContent() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [summaryLoading, setSummaryLoading] = useState(false);
+  const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const totalTokens = useMemo(() => {
@@ -113,13 +115,15 @@ function DocumentDetailContent() {
     setLoading(true);
 
     try {
-      const [documentData, chunkData] = await Promise.all([
+      const [documentData, chunkData, savedSummary] = await Promise.all([
         getDocument(documentId),
         listDocumentChunks(documentId),
+        getDocumentSummary(documentId),
       ]);
 
       setDocument(documentData);
       setChunks(chunkData);
+      setSummary(savedSummary);
     } catch (err) {
       setError(
         err instanceof Error
@@ -153,14 +157,15 @@ function DocumentDetailContent() {
     }
   }
 
-  async function handleGenerateSummary() {
+  async function handleGenerateSummary(force = false) {
     if (!documentId) return;
 
     setSummaryLoading(true);
     setError(null);
+    setCopyFeedback(null);
 
     try {
-      const generatedSummary = await generateDocumentSummary(documentId);
+      const generatedSummary = await generateDocumentSummary(documentId, force);
       setSummary(generatedSummary);
     } catch (err) {
       setError(
@@ -171,6 +176,46 @@ function DocumentDetailContent() {
     } finally {
       setSummaryLoading(false);
     }
+  }
+
+  async function handleCopySummary() {
+    if (!summary) return;
+
+    await navigator.clipboard.writeText(summary.summary);
+    setCopyFeedback("Résumé copié.");
+  }
+
+  function handleExportSummary() {
+    if (!summary || !document) return;
+
+    const content = `# Résumé — ${document.title}
+
+Document : ${document.filename}
+Provider : ${summary.provider}
+Chunks utilisés : ${summary.chunks_used}
+Généré le : ${
+      summary.created_at
+        ? new Date(summary.created_at).toLocaleString("fr-FR")
+        : "date inconnue"
+    }
+
+---
+
+${summary.summary}
+`;
+
+    const blob = new Blob([content], {
+      type: "text/markdown;charset=utf-8",
+    });
+
+    const url = URL.createObjectURL(blob);
+    const link = window.document.createElement("a");
+
+    link.href = url;
+    link.download = `${document.title.replaceAll(" ", "_")}_resume.md`;
+    link.click();
+
+    URL.revokeObjectURL(url);
   }
 
   async function handleDelete() {
@@ -253,11 +298,15 @@ function DocumentDetailContent() {
 
                 <div className="flex shrink-0 flex-wrap gap-2">
                   <button
-                    onClick={handleGenerateSummary}
+                    onClick={() => handleGenerateSummary(Boolean(summary))}
                     disabled={summaryLoading || chunks.length === 0}
                     className="rounded-lg border border-blue-500/40 px-4 py-2 text-sm text-blue-300 hover:bg-blue-500/10 disabled:opacity-60"
                   >
-                    {summaryLoading ? "Résumé..." : "Générer un résumé"}
+                    {summaryLoading
+                      ? "Résumé..."
+                      : summary
+                        ? "Régénérer le résumé"
+                        : "Générer un résumé"}
                   </button>
 
                   <button
@@ -317,14 +366,42 @@ function DocumentDetailContent() {
                   </p>
                 </div>
 
-                <button
-                  onClick={handleGenerateSummary}
-                  disabled={summaryLoading || chunks.length === 0}
-                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
-                >
-                  {summaryLoading ? "Génération..." : "Générer"}
-                </button>
+                <div className="flex flex-wrap gap-2">
+                  {summary && (
+                    <>
+                      <button
+                        onClick={handleCopySummary}
+                        className="rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-200 hover:bg-slate-800"
+                      >
+                        Copier
+                      </button>
+
+                      <button
+                        onClick={handleExportSummary}
+                        className="rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-200 hover:bg-slate-800"
+                      >
+                        Exporter .md
+                      </button>
+                    </>
+                  )}
+
+                  <button
+                    onClick={() => handleGenerateSummary(Boolean(summary))}
+                    disabled={summaryLoading || chunks.length === 0}
+                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+                  >
+                    {summaryLoading
+                      ? "Génération..."
+                      : summary
+                        ? "Régénérer"
+                        : "Générer"}
+                  </button>
+                </div>
               </div>
+
+              {copyFeedback && (
+                <p className="mt-4 text-sm text-emerald-300">{copyFeedback}</p>
+              )}
 
               {!summary && !summaryLoading && (
                 <div className="mt-6 rounded-xl border border-dashed border-slate-700 p-8 text-center text-slate-400">
@@ -347,7 +424,9 @@ function DocumentDetailContent() {
                     <span>·</span>
                     <span>
                       Généré le{" "}
-                      {new Date(summary.generated_at).toLocaleString("fr-FR")}
+                      {summary.created_at
+                        ? new Date(summary.created_at).toLocaleString("fr-FR")
+                        : "date inconnue"}
                     </span>
                   </div>
 

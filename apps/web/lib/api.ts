@@ -211,11 +211,22 @@ export function listDocumentChunks(
   return request<DocumentChunk[]>(`/documents/${documentId}/chunks`, {}, true);
 }
 
-export function generateDocumentSummary(
+export function getDocumentSummary(
   documentId: string
+): Promise<DocumentSummary | null> {
+  return request<DocumentSummary | null>(
+    `/documents/${documentId}/summary`,
+    {},
+    true
+  );
+}
+
+export function generateDocumentSummary(
+  documentId: string,
+  force = false
 ): Promise<DocumentSummary> {
   return request<DocumentSummary>(
-    `/documents/${documentId}/summary`,
+    `/documents/${documentId}/summary?force=${force}`,
     {
       method: "POST",
     },
