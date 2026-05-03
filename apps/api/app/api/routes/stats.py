@@ -11,7 +11,7 @@ from app.models.message import Message
 from app.models.user import User
 from app.schemas.stats import DashboardStatsRead
 
-router = APIRouter(prefix="/stats", tags=["Stats"])
+router = APIRouter(tags=["Stats"])
 
 
 @router.get("/dashboard", response_model=DashboardStatsRead)
