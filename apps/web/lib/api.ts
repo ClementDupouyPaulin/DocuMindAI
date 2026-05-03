@@ -6,6 +6,7 @@ import type {
   Conversation,
   ConversationDetail,
   DashboardStats,
+  DocumentChunk,
   DocumentItem,
   User,
 } from "@/types/api";
@@ -197,4 +198,14 @@ export function getDashboardStats(): Promise<DashboardStats> {
 
 export function getAiStatus(): Promise<AiStatus> {
   return request<AiStatus>("/health/ai");
+}
+
+export function getDocument(documentId: string): Promise<DocumentItem> {
+  return request<DocumentItem>(`/documents/${documentId}`, {}, true);
+}
+
+export function listDocumentChunks(
+  documentId: string
+): Promise<DocumentChunk[]> {
+  return request<DocumentChunk[]>(`/documents/${documentId}/chunks`, {}, true);
 }

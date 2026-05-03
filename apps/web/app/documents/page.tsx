@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import {
@@ -232,7 +233,9 @@ export default function DocumentsPage() {
             </label>
 
             <label className="block">
-              <span className="text-sm text-slate-300">Fichier PDF/TXT/DOCX</span>
+              <span className="text-sm text-slate-300">
+                Fichier PDF/TXT/DOCX
+              </span>
 
               <div className="mt-1 flex items-center gap-2">
                 <input
@@ -341,7 +344,14 @@ export default function DocumentsPage() {
                     )}
                   </div>
 
-                  <div className="flex shrink-0 gap-2">
+                  <div className="flex shrink-0 flex-wrap gap-2">
+                    <Link
+                      href={`/documents/detail?documentId=${document.id}`}
+                      className="rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:bg-slate-800"
+                    >
+                      Détails
+                    </Link>
+
                     <button
                       onClick={() => handleIndex(document.id)}
                       disabled={

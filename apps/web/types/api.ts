@@ -81,3 +81,13 @@ export type AiStatus = {
   embedding_model: string;
   demo_mode: boolean;
 };
+
+export type DocumentChunk = {
+  id: string;
+  document_id: string;
+  chunk_index: number;
+  content: string;
+  token_count: number;
+  page_number?: number | null;
+  created_at: string;
+};
