@@ -2,8 +2,20 @@
 
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
-import { getAiStatus, getDashboardStats, getMe } from "@/lib/api";
-import type { AiStatus, DashboardStats, User } from "@/types/api";
+import {
+  getAiStatus,
+  getApiHealth,
+  getDashboardStats,
+  getDbHealth,
+  getMe,
+  getQdrantHealth,
+} from "@/lib/api";
+import type {
+  AiStatus,
+  DashboardStats,
+  HealthStatus,
+  User,
+} from "@/types/api";
 
 function InfoCard({
   title,
@@ -43,10 +55,49 @@ function StatusBadge({
   );
 }
 
+function HealthCard({
+  title,
+  health,
+  description,
+}: {
+  title: string;
+  health: HealthStatus | null;
+  description: string;
+}) {
+  const isOk = health?.status === "ok";
+
+  return (
+    <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm text-slate-400">{title}</p>
+
+        <span
+          className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+            isOk
+              ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+              : "border-red-500/40 bg-red-500/10 text-red-300"
+          }`}
+        >
+          {isOk ? "OK" : "Indisponible"}
+        </span>
+      </div>
+
+      <p className="mt-3 text-xl font-bold text-white">
+        {isOk ? "Opérationnel" : "Erreur"}
+      </p>
+
+      <p className="mt-2 text-xs leading-5 text-slate-500">{description}</p>
+    </div>
+  );
+}
+
 export default function SettingsPage() {
   const [user, setUser] = useState<User | null>(null);
   const [aiStatus, setAiStatus] = useState<AiStatus | null>(null);
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [apiHealth, setApiHealth] = useState<HealthStatus | null>(null);
+  const [dbHealth, setDbHealth] = useState<HealthStatus | null>(null);
+  const [qdrantHealth, setQdrantHealth] = useState<HealthStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -55,15 +106,28 @@ export default function SettingsPage() {
     setLoading(true);
 
     try {
-      const [currentUser, currentAiStatus, dashboardStats] = await Promise.all([
+      const [
+        currentUser,
+        currentAiStatus,
+        dashboardStats,
+        currentApiHealth,
+        currentDbHealth,
+        currentQdrantHealth,
+      ] = await Promise.all([
         getMe(),
         getAiStatus(),
         getDashboardStats(),
+        getApiHealth(),
+        getDbHealth(),
+        getQdrantHealth(),
       ]);
 
       setUser(currentUser);
       setAiStatus(currentAiStatus);
       setStats(dashboardStats);
+      setApiHealth(currentApiHealth);
+      setDbHealth(currentDbHealth);
+      setQdrantHealth(currentQdrantHealth);
     } catch (err) {
       setError(
         err instanceof Error
@@ -96,9 +160,10 @@ export default function SettingsPage() {
 
           <button
             onClick={loadSettings}
-            className="rounded-lg border border-slate-700 px-4 py-2 text-sm hover:bg-slate-800"
+            disabled={loading}
+            className="rounded-lg border border-slate-700 px-4 py-2 text-sm hover:bg-slate-800 disabled:opacity-60"
           >
-            Rafraîchir
+            {loading ? "Chargement..." : "Rafraîchir"}
           </button>
         </div>
 
@@ -192,6 +257,36 @@ export default function SettingsPage() {
               </div>
             </section>
 
+            <section className="mt-8">
+              <div className="mb-4">
+                <h2 className="text-2xl font-bold">Santé du système</h2>
+                <p className="mt-2 text-sm text-slate-400">
+                  Vérification rapide des services essentiels utilisés par
+                  DocuMind AI en production.
+                </p>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-3">
+                <HealthCard
+                  title="Backend API"
+                  health={apiHealth}
+                  description="Service FastAPI hébergé sur Render et utilisé par le frontend."
+                />
+
+                <HealthCard
+                  title="PostgreSQL"
+                  health={dbHealth}
+                  description="Base relationnelle Neon utilisée pour les utilisateurs, documents, chunks, conversations et résumés."
+                />
+
+                <HealthCard
+                  title="Qdrant"
+                  health={qdrantHealth}
+                  description="Base vectorielle Qdrant Cloud utilisée pour rechercher les chunks proches des questions."
+                />
+              </div>
+            </section>
+
             <section className="mt-8 grid gap-4 md:grid-cols-3">
               <InfoCard
                 title="Utilisateur connecté"
@@ -215,7 +310,7 @@ export default function SettingsPage() {
             <section className="mt-8 rounded-2xl border border-slate-800 bg-slate-900 p-6">
               <h2 className="text-2xl font-bold">Configuration `.env`</h2>
               <p className="mt-2 text-sm text-slate-400">
-                Rappel des deux modes possibles pour ton backend.
+                Rappel des variables importantes pour le backend cloud.
               </p>
 
               <div className="mt-6 grid gap-4 lg:grid-cols-2">
@@ -227,8 +322,9 @@ export default function SettingsPage() {
                   <pre className="mt-4 overflow-x-auto rounded-lg bg-black/40 p-4 text-xs leading-6 text-slate-300">
 {`LLM_PROVIDER=mock
 LLM_MODEL=mock
-OPENAI_API_KEY=
-EMBEDDING_MODEL=text-embedding-3-small`}
+EMBEDDING_PROVIDER=mock
+EMBEDDING_MODEL=text-embedding-3-small
+OPENAI_API_KEY=`}
                   </pre>
 
                   <p className="mt-3 text-xs leading-5 text-slate-500">
@@ -245,15 +341,35 @@ EMBEDDING_MODEL=text-embedding-3-small`}
                   <pre className="mt-4 overflow-x-auto rounded-lg bg-black/40 p-4 text-xs leading-6 text-slate-300">
 {`LLM_PROVIDER=openai
 LLM_MODEL=gpt-4.1-mini
-OPENAI_API_KEY=sk-...
-EMBEDDING_MODEL=text-embedding-3-small`}
+EMBEDDING_PROVIDER=openai
+EMBEDDING_MODEL=text-embedding-3-small
+OPENAI_API_KEY=sk-...`}
                   </pre>
 
                   <p className="mt-3 text-xs leading-5 text-slate-500">
-                    À utiliser uniquement avec une clé valide stockée dans ton
-                    `.env`, jamais dans Git.
+                    À utiliser uniquement avec une clé valide stockée dans les
+                    variables d’environnement Render, jamais dans Git.
                   </p>
                 </div>
+              </div>
+
+              <div className="mt-6 rounded-xl border border-slate-800 bg-slate-950 p-4">
+                <p className="text-sm font-semibold text-slate-200">
+                  Variables cloud essentielles
+                </p>
+
+                <pre className="mt-4 overflow-x-auto rounded-lg bg-black/40 p-4 text-xs leading-6 text-slate-300">
+{`DATABASE_URL=postgresql+psycopg://...
+QDRANT_URL=https://...cloud.qdrant.io
+QDRANT_API_KEY=...
+CORS_ORIGINS=http://localhost:3000,https://ton-site.vercel.app
+JWT_SECRET_KEY=...`}
+                </pre>
+
+                <p className="mt-3 text-xs leading-5 text-slate-500">
+                  Ces variables sont configurées côté Render pour garder les
+                  secrets hors du dépôt GitHub.
+                </p>
               </div>
             </section>
           </>

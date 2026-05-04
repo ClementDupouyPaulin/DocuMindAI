@@ -9,6 +9,7 @@ import type {
   DocumentChunk,
   DocumentItem,
   DocumentSummary,
+  HealthStatus,
   User,
 } from "@/types/api";
 
@@ -242,4 +243,16 @@ export function deleteConversation(conversationId: string): Promise<void> {
     },
     true
   );
+}
+
+export function getApiHealth(): Promise<HealthStatus> {
+  return request<HealthStatus>("/health");
+}
+
+export function getDbHealth(): Promise<HealthStatus> {
+  return request<HealthStatus>("/health/db");
+}
+
+export function getQdrantHealth(): Promise<HealthStatus> {
+  return request<HealthStatus>("/health/qdrant");
 }

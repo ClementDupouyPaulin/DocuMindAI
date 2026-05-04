@@ -103,3 +103,7 @@ export type DocumentSummary = {
   provider: string;
   created_at: string;
 };
+
+export type HealthStatus = {
+  status: string;
+};
