@@ -56,20 +56,6 @@ def delete_conversation_for_user(
     conversation_id: uuid.UUID,
     current_user: User,
 ) -> None:
-    conversation, _ = get_conversation_for_user(
-        db=db,
-        conversation_id=conversation_id,
-        current_user=current_user,
-    )
-
-    db.delete(conversation)
-    db.commit()
-
-def delete_conversation_for_user(
-    db: Session,
-    conversation_id: uuid.UUID,
-    current_user: User,
-) -> None:
     conversation = db.get(Conversation, conversation_id)
 
     if conversation is None or conversation.user_id != current_user.id:
