@@ -109,6 +109,7 @@ def delete_document(
         current_user=current_user,
     )
 
+
 @router.get("/{document_id}/summary", response_model=DocumentSummaryRead | None)
 def get_document_summary(
     document_id: uuid.UUID,

@@ -17,6 +17,7 @@ from app.services.vector_service import vector_service
 
 logger = logging.getLogger(__name__)
 
+
 def index_document(
     db: Session,
     document_id: uuid.UUID,
@@ -119,6 +120,7 @@ def list_chunks_for_document(
 
     return list(db.execute(statement).scalars().all())
 
+
 def enqueue_document_indexing(
     db: Session,
     document_id: uuid.UUID,
@@ -183,7 +185,8 @@ def index_document_in_background(document_id: str, user_id: str) -> None:
 
     finally:
         db.close()
-        
+
+
 def format_indexing_error(error: Exception) -> str:
     message = str(error)
 

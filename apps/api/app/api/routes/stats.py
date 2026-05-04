@@ -51,9 +51,7 @@ def get_dashboard_stats(
     )
 
     total_conversations = db.scalar(
-        select(func.count(Conversation.id)).where(
-            Conversation.user_id == current_user.id
-        )
+        select(func.count(Conversation.id)).where(Conversation.user_id == current_user.id)
     )
 
     total_messages = db.scalar(

@@ -124,9 +124,7 @@ Réponds à la question avec des citations de sources.
             if point:
                 key_points.append(f"- {point} [source_{source_index}]")
 
-        notions = self._extract_mock_notions(
-            " ".join(text for _, text in cleaned_excerpts)
-        )
+        notions = self._extract_mock_notions(" ".join(text for _, text in cleaned_excerpts))
 
         notions_block = (
             "\n".join(f"- {notion}" for notion in notions)

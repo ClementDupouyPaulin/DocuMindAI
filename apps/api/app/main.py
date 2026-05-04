@@ -17,11 +17,7 @@ app = FastAPI(
     description="DocuMind AI API - RAG document assistant backend",
 )
 
-allowed_origins = [
-    origin.strip()
-    for origin in settings.cors_origins.split(",")
-    if origin.strip()
-]
+allowed_origins = [origin.strip() for origin in settings.cors_origins.split(",") if origin.strip()]
 
 app.add_middleware(
     CORSMiddleware,

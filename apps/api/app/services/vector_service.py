@@ -104,9 +104,7 @@ class VectorService:
             must_conditions.append(
                 models.FieldCondition(
                     key="document_id",
-                    match=models.MatchAny(
-                        any=[str(document_id) for document_id in document_ids]
-                    ),
+                    match=models.MatchAny(any=[str(document_id) for document_id in document_ids]),
                 )
             )
 
