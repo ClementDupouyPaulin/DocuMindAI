@@ -1,0 +1,89 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  backend:
+    name: Backend checks
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: apps/api
+
+    env:
+      APP_NAME: DocuMind AI
+      ENVIRONMENT: test
+      DATABASE_URL: sqlite:///./test.db
+      QDRANT_URL: http://localhost:6333
+      QDRANT_API_KEY: ""
+      JWT_SECRET_KEY: test-secret-key
+      JWT_ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: 60
+      LLM_PROVIDER: mock
+      LLM_MODEL: mock
+      EMBEDDING_PROVIDER: mock
+      EMBEDDING_MODEL: text-embedding-3-small
+      QDRANT_COLLECTION_NAME: documind_chunks_test
+      EMBEDDING_DIMENSION: 1536
+      UPLOAD_DIR: /tmp/documind_uploads
+      MAX_UPLOAD_SIZE_MB: 25
+      CORS_ORIGINS: http://localhost:3000
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install backend dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Check backend formatting
+        run: black --check app
+
+      - name: Lint backend
+        run: ruff check app
+
+      - name: Run backend tests
+        run: pytest
+
+  frontend:
+    name: Frontend checks
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: apps/web
+
+    env:
+      NEXT_PUBLIC_API_URL: https://documindai-7sqn.onrender.com
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Typecheck frontend
+        run: npm run typecheck
+
+      - name: Build frontend
+        run: npm run build
